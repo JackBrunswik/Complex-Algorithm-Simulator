@@ -15,6 +15,7 @@ class MergeSort:
         self.resetMetrics()
         arrCopy = list(arr)
         self._mergeSort(arrCopy)
+
         return {
             "comparisons": self.comparisons,
             "array_accesses": self.array_accesses,

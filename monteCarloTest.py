@@ -3,7 +3,6 @@ import math
 from scipy import stats
 from mergeSort import MergeSort
 
-
 def run_monte_carlo(n, k):
     ms = MergeSort()
     results = []
@@ -14,7 +13,6 @@ def run_monte_carlo(n, k):
         results.append(metrics["comparisons"])
 
     return results
-
 
 def analyze_results(data):
     mean = np.mean(data)
@@ -29,7 +27,6 @@ def analyze_results(data):
     )
 
     return mean, variance, confidence_interval
-
 
 if __name__ == "__main__":
     n = 1000

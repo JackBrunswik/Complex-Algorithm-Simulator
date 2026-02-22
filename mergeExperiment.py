@@ -4,7 +4,6 @@ import math
 from scipy import stats
 from mergeSort import MergeSort
 
-
 def run_trials(n, k):
     ms = MergeSort()
     results = []
@@ -15,7 +14,6 @@ def run_trials(n, k):
         results.append(metrics["comparisons"])
 
     return results
-
 
 def analyze(data):
     mean = np.mean(data)
@@ -30,7 +28,6 @@ def analyze(data):
     )
 
     return mean, variance, ci
-
 
 if __name__ == "__main__":
     n_values = [100, 500, 1000, 2000, 5000]

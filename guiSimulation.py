@@ -5,12 +5,11 @@ import math
 from scipy import stats
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import networkx as nx
 
-from mergeSort import MergeSort
 from quickSort import QuickSort
-
 from mergeSort import MergeSort
-
+from randomGraphBFS import RandomGraphBFS
 
 class SimulationGUI:
 
@@ -32,7 +31,7 @@ class SimulationGUI:
 
         self.algorithm_choice = ttk.Combobox(
             control_frame,
-            values=["Merge Sort", "Quick Sort"],
+            values=["Merge Sort", "Quick Sort", "Random Graph BFS"],
             state="readonly"
         )
         self.algorithm_choice.current(0)
@@ -40,7 +39,7 @@ class SimulationGUI:
 
         ttk.Label(control_frame, text="Min n:").pack()
         self.min_n = ttk.Entry(control_frame)
-        self.min_n.insert(0, "100")
+        self.min_n.insert(0, "1")
         self.min_n.pack()
 
         ttk.Label(control_frame, text="Max n:").pack()
@@ -50,7 +49,7 @@ class SimulationGUI:
 
         ttk.Label(control_frame, text="Step:").pack()
         self.step = ttk.Entry(control_frame)
-        self.step.insert(0, "10")
+        self.step.insert(0, "1")
         self.step.pack()
 
         ttk.Label(control_frame, text="Trials (k):").pack()
@@ -87,8 +86,10 @@ class SimulationGUI:
 
         if self.algorithm_choice.get() == "Merge Sort":
             algorithm = MergeSort()
-        else:
+        elif self.algorithm_choice.get() == "Quick Sort":
             algorithm = QuickSort()
+        else:
+            return []
 
         results = []
 
@@ -100,12 +101,72 @@ class SimulationGUI:
             metrics = algorithm.sort(arr)
             results.append(metrics["comparisons"])
 
-            self.root.update()  # keep GUI responsive
+            self.root.update()
 
-        return results
+        return results  # Keep GUI responsive
+
+    def visualize_and_run_bfs(self):
+
+        n = int(self.min_n.get())
+        p = 0.1
+
+        if n > 40:
+            print("Visualization limited to n <= 40")
+            return
+
+        bfs_sim = RandomGraphBFS(p)
+        G = bfs_sim.generate_connected_graph(n)
+
+        pos = nx.spring_layout(G, seed=42)
+
+        visited = set()
+        queue = [0]
+        visited.add(0)
+
+        # Clear existing plot
+        self.ax.clear()
+
+        while queue:
+
+            current = queue.pop(0)
+
+            self.ax.clear()
+
+            node_colors = []
+            for node in G.nodes():
+                if node in visited:
+                    node_colors.append("red")
+                else:
+                    node_colors.append("lightblue")
+
+            nx.draw(
+                G,
+                pos,
+                ax=self.ax,
+                node_color=node_colors,
+                with_labels=True,
+                font_size=8,
+                node_size=500
+            )
+
+            self.ax.set_title("Connected Random Graph BFS Traversal")
+            self.canvas.draw()  # Redraw embedded figure
+            self.root.update()  # Keep GUI responsive
+            self.root.after(500) # Delay (500 ms)
+
+            for neighbor in G.neighbors(current):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
 
     # Simulation runner
     def run_simulation(self):
+
+        choice = self.algorithm_choice.get()
+
+        if choice == "Random Graph BFS":
+            self.visualize_and_run_bfs()
+            return
 
         # Reset stop flag at start
         self.stop_requested = False
@@ -145,9 +206,11 @@ class SimulationGUI:
             mean, variance, ci = self.analyze(data)
 
             empirical.append(mean)
-            theoretical.append(n * math.log2(n))
             lower.append(ci[0])
             upper.append(ci[1])
+
+            # Theoretical model
+            theoretical.append(n * math.log2(n))
 
             # Update Plot in Real Time
             self.ax.clear()

@@ -1,7 +1,52 @@
-Project Overview
+# Complex Algorithm Simulator Overview
 
-The Algorithm Visualization Simulator is a modeling and simulation project that visualizes and analyzes the dynamic behavior of complex algorithms during execution. Instead of focusing solely on theoretical measures such as Big-O complexity, the simulator models algorithms as evolving systems whose internal states change over discrete simulation steps.
+A stochastic simulation and visualization tool for analyzing and comparing algorithm behavior under varying input sizes.
 
-The system implements algorithms such as sorting methods and graph traversal techniques (e.g., Quicksort, Merge Sort, BFS, and Dijkstra’s Algorithm) and treats each algorithmic operation as a discrete event. A centralized simulation engine manages execution flow, state updates, metric collection, and visualization.
+This project integrates Monte Carlo experimentation with real-time algorithm visualization, allowing users to study both empirical complexity and step-by-step execution within an interactive framework.
 
-The simulator enables step-by-step execution, tracks operation-level metrics (comparisons, swaps, node visits), and supports experimentation with different input sizes and distributions. By combining discrete-event simulation principles with algorithm visualization, the project provides a data-driven framework for analyzing algorithm performance and behavior over time.
+## Features
+
+### Monte Carlo Mode
+- Runs repeated randomized trials for varying input sizes
+- Computes empirical mean comparisons
+- Plots performance growth
+- Compares empirical results against theoretical O(n log n)
+
+### Visualization Mode
+- Real-time array graph animation of:
+  - Merge Sort
+  - Quick Sort
+- Displays array transformations during sorting
+
+### Random Graph BFS
+- Generates a connected random graph
+- Labels all nodes numerically
+- Animates breadth-first traversal in real time
+
+## Algorithms Implemented
+
+- Merge Sort — O(n log n)
+- Quick Sort — Expected O(n log n)
+- Random Graph Breadth-First Search
+
+## Technologies Used
+
+- Python
+- NumPy
+- SciPy
+- Matplotlib
+- NetworkX
+- Tkinter (GUI framework)
+
+## Installation
+
+Clone the repository:
+
+git clone https://github.com/JackBrunswik/Complex-Algorithm-Simulator.git  
+cd Complex-Algorithm-Simulator
+
+Install dependencies:
+pip install -r requirements.txt  
+
+Run the application:
+python guiSimulation.py

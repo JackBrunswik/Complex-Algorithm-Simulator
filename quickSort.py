@@ -10,14 +10,40 @@ class QuickSort:
     def sort(self, arr):
         self.reset_metrics()
         arr_copy = list(arr)
-        self._quicksort(arr_copy, 0, len(arr_copy) - 1)
+        self.quick_Sort(arr_copy, 0, len(arr_copy) - 1)
         return {"comparisons": self.comparisons}
 
-    def _quicksort(self, arr, low, high):
+    def quick_Sort(self, arr, low, high):
         if low < high:
             pivot_index = self._random_partition(arr, low, high)
-            self._quicksort(arr, low, pivot_index - 1)
-            self._quicksort(arr, pivot_index + 1, high)
+            self.quick_Sort(arr, low, pivot_index - 1)
+            self.quick_Sort(arr, pivot_index + 1, high)
+
+    def sort_generator(self, arr):
+        arr = arr.copy()
+        yield from self.quick_sort_generator(arr, 0, len(arr) - 1)
+        yield arr, []
+
+    def quick_sort_generator(self, arr, low, high):
+        if low < high:
+            pivot_index = yield from self.partition_generator(arr, low, high)
+            yield from self.quick_sort_generator(arr, low, pivot_index - 1)
+            yield from self.quick_sort_generator(arr, pivot_index + 1, high)
+
+    def partition_generator(self, arr, low, high):
+        pivot = arr[high]
+        i = low - 1
+
+        for j in range(low, high):
+            if arr[j] < pivot:
+                i += 1
+                arr[i], arr[j] = arr[j], arr[i]
+                yield arr.copy(), [i, j]
+
+        arr[i + 1], arr[high] = arr[high], arr[i + 1]
+        yield arr.copy(), [i + 1, high]
+
+        return i + 1
 
     def _random_partition(self, arr, low, high):
         pivot_index = random.randint(low, high)

@@ -72,6 +72,15 @@ class SimulationGUI:
         self.k_trials.insert(0, "50")
         self.k_trials.pack()
 
+        # BFS visualization legend
+        self.bfs_legend = ttk.Label(
+            control_frame,
+            text="BFS Legend\n\nRed = Current\nOrange = Frontier\nBlue = Visited",
+            justify="left"
+        )
+        self.mode_choice.bind("<<ComboboxSelected>>", lambda e: self.update_bfs_legend_visibility())
+        self.algorithm_choice.bind("<<ComboboxSelected>>", lambda e: self.update_bfs_legend_visibility())
+
         # Run button
         self.run_button = ttk.Button(
             control_frame,
@@ -88,6 +97,18 @@ class SimulationGUI:
         )
         self.stop_button.pack(pady=5)
 
+    # Toggle BFS Legend
+    def update_bfs_legend_visibility(self):
+        algorithm = self.algorithm_choice.get()
+        mode = self.mode_choice.get()
+
+        if algorithm == "Random Graph BFS" and mode == "Visualization":
+            if not self.bfs_legend.winfo_ismapped():
+                self.bfs_legend.pack(pady=(10, 0))
+        else:
+            if self.bfs_legend.winfo_ismapped():
+                self.bfs_legend.pack_forget()
+
     # Stop sim
     def stop_simulation(self):
         """ Sets stop flag to True.
@@ -103,12 +124,13 @@ class SimulationGUI:
 
     # BFS visualization
     def visualize_and_run_bfs(self):
-        """ Generates a connected random graph and animates
-        Breadth-First Search traversal in real time. """
-        n = int(self.min_n.get())
-        p = 0.1  # Edge probability
+        """Generates a connected random graph and animates
+        Breadth-First Search traversal using BFS layers."""
 
-        # Limit visualization size for clarity
+        self.ax.set_title("Random Graph BFS Traversal")
+        n = int(self.min_n.get())
+        p = 0.1
+
         if n > 40:
             print("Visualization limited to n <= 40")
             return
@@ -120,44 +142,105 @@ class SimulationGUI:
 
         visited = set()
         queue = [0]
+
         visited.add(0)
 
-        self.ax.clear()
+        # Track node colors
+        node_colors = {node: "lightgray" for node in G.nodes()}
 
         while queue:
-
             if self.stop_requested:
                 break
 
             current = queue.pop(0)
 
-            self.ax.clear()
+            # Current node becomes RED
+            node_colors[current] = "red"
 
-            # Color visited nodes red
-            node_colors = [
-                "red" if node in visited else "lightblue"
-                for node in G.nodes()
-            ]
+            self.ax.clear()
             nx.draw(
                 G,
                 pos,
                 ax=self.ax,
-                node_color=node_colors,
+                node_color=[node_colors[n] for n in G.nodes()],
                 with_labels=True,
                 font_size=8,
                 node_size=500
             )
-            self.ax.set_title("Connected Random Graph BFS Traversal")
+            self.bfs_legend.config(text=f"""
+            Red = Current
+            Orange = Frontier
+            Blue = Visited
 
+            Current Node: {current}
+            Queue Size: {len(queue)}
+            Visited: {len(visited)}
+            """)
             self.canvas.draw()
             self.root.update()
-            self.root.after(500)  # 500ms delay
+            self.root.after(500)
 
-            # Add unvisited neighbors to queue
+            # Collect ALL neighbors first
+            new_neighbors = []
+
             for neighbor in G.neighbors(current):
                 if neighbor not in visited:
                     visited.add(neighbor)
                     queue.append(neighbor)
+                    new_neighbors.append(neighbor)
+
+            # Highlight them simultaneously (ORANGE)
+            for node in new_neighbors:
+                node_colors[node] = "orange"
+
+            self.ax.clear()
+            nx.draw(
+                G,
+                pos,
+                ax=self.ax,
+                node_color=[node_colors[n] for n in G.nodes()],
+                with_labels=True,
+                font_size=8,
+                node_size=500
+            )
+            self.bfs_legend.config(text=f"""
+            Red = Current
+            Orange = Frontier
+            Blue = Visited
+
+            Current Node: {current}
+            Queue Size: {len(queue)}
+            Visited: {len(visited)}
+            """)
+            self.canvas.draw()
+            self.root.update()
+            self.root.after(500)
+
+            # Mark current node as fully visited (BLUE)
+            node_colors[current] = "blue"
+
+            self.ax.clear()
+            nx.draw(
+                G,
+                pos,
+                ax=self.ax,
+                node_color=[node_colors[n] for n in G.nodes()],
+                with_labels=True,
+                font_size=8,
+                node_size=500
+            )
+            self.bfs_legend.config(text=f"""
+            Red = Current
+            Orange = Frontier
+            Blue = Visited
+
+            Current Node: {current}
+            Queue Size: {len(queue)}
+            Visited: {len(visited)}
+            """)
+            self.canvas.draw()
+            self.root.update()
+            self.root.after(500)
 
     # Monte Carlo mode
     def run_monte_carlo(self):
@@ -272,10 +355,8 @@ class SimulationGUI:
         generator = QuickSort().sort_generator(arr)
 
         for state, highlight in generator:
-
             if self.stop_requested:
                 break
-
             for index, (bar, height) in enumerate(zip(bars, state)):
                 bar.set_height(height)
 
@@ -290,19 +371,16 @@ class SimulationGUI:
             self.root.after(50)  # Animation speed (ms)
 
     def run_simulation(self):
-
         self.stop_requested = False
 
         algorithm_name = self.algorithm_choice.get()
         mode = self.mode_choice.get()
 
         if algorithm_name == "Random Graph BFS":
-
             if mode == "Monte Carlo":
                 self.run_bfs_monte_carlo()
             else:
                 self.visualize_and_run_bfs()
-
             return
 
         # Otherwise: QuickSort

@@ -5,6 +5,7 @@ import math
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import networkx as nx
+from kargerMinCut import KargerMinCut
 
 # Import algorithms
 from quickSort import QuickSort
@@ -45,7 +46,7 @@ class SimulationGUI:
         ttk.Label(control_frame, text="Algorithm:").pack()
         self.algorithm_choice = ttk.Combobox(
             control_frame,
-            values=["Randomized Quick Sort", "Random Graph BFS"],
+            values=["Randomized Quick Sort", "Random Graph BFS", "Karger Min-Cut"],
             state="readonly"
         )
         self.algorithm_choice.current(0)
@@ -111,8 +112,7 @@ class SimulationGUI:
 
     # Stop sim
     def stop_simulation(self):
-        """ Sets stop flag to True.
-        All loops check this flag to safely exit early. """
+        """ Sets stop flag to True. All loops check this flag to safely exit early. """
         self.stop_requested = True
 
     # Plot setup
@@ -124,8 +124,7 @@ class SimulationGUI:
 
     # BFS visualization
     def visualize_and_run_bfs(self):
-        """Generates a connected random graph and animates
-        Breadth-First Search traversal using BFS layers."""
+        """ Generates a connected random graph and animates Breadth-First Search traversal using BFS layers. """
 
         self.ax.set_title("Random Graph BFS Traversal")
         n = int(self.min_n.get())
@@ -335,10 +334,129 @@ class SimulationGUI:
             self.canvas.draw()
             self.root.update()
 
+    def run_karger_monte_carlo(self):
+        min_n = int(self.min_n.get())
+        max_n = int(self.max_n.get())
+        step = int(self.step.get())
+        k = int(self.k_trials.get())
+
+        n_values = list(range(min_n, max_n + 1, step))
+
+        empirical = []
+        theoretical = []
+
+        karger = KargerMinCut()
+
+        for n in n_values:
+            if self.stop_requested:
+                break
+
+            # Generate one graph for this n
+            G = karger.generate_graph(n)
+
+            # Compute true minimum cut once
+            true_cut = len(nx.minimum_edge_cut(G))
+
+            success_count = 0
+
+            for _ in range(k):
+                result = karger.run_karger(G)
+
+                if result["cut_size"] == true_cut:
+                    success_count += 1
+
+            success_probability = success_count / k
+
+            empirical.append(success_probability)
+
+            # Theoretical bound: 2 / (n(n-1))
+            theoretical.append(2 / (n * (n - 1)))
+
+            # Realtime plot update
+            self.ax.clear()
+
+            self.ax.plot(
+                n_values[:len(empirical)],
+                empirical,
+                label="Empirical Success Probability"
+            )
+
+            self.ax.plot(
+                n_values[:len(theoretical)],
+                theoretical,
+                label="Theoretical Lower Bound"
+            )
+
+            self.ax.set_xlabel("Number of Nodes (n)")
+            self.ax.set_ylabel("Probability of Finding Min-Cut")
+
+            self.ax.set_title("Monte Carlo Simulation: Karger's Min-Cut")
+
+            self.ax.legend()
+
+            self.canvas.draw()
+            self.root.update()
+
+    def visualize_karger(self):
+        n = int(self.min_n.get())
+
+        if n > 25:
+            print("Visualization limited to n <= 25")
+            return
+
+        karger = KargerMinCut()
+        G = karger.generate_graph(n)
+
+        pos = nx.spring_layout(G, seed=42)
+
+        generator = karger.contraction_generator(G)
+
+        for state, edge in generator:
+            if self.stop_requested:
+                break
+
+            self.ax.clear()
+
+            # Default node colors
+            node_colors = ["lightblue" for _ in state.nodes()]
+
+            # Highlight nodes that will be merged
+            if edge is not None:
+                u, v = edge
+
+                node_colors = [
+                    "red" if node == u or node == v else "lightblue"
+                    for node in state.nodes()
+                ]
+
+            nx.draw(
+                state,
+                pos,
+                ax=self.ax,
+                node_color=node_colors,
+                edge_color="gray",
+                with_labels=True,
+                node_size=500
+            )
+
+            # Highlight the edge being contracted
+            if edge is not None and state.has_edge(*edge):
+                nx.draw_networkx_edges(
+                    state,
+                    pos,
+                    edgelist=[edge],
+                    edge_color="red",
+                    width=3,
+                    ax=self.ax
+                )
+            self.ax.set_title("Karger's Min-Cut Contraction")
+            self.canvas.draw()
+            self.root.update()
+            self.root.after(800)
+
     # Sort visualization mode
     def visualize_sort(self):
-        """ Animates a single randomized Quick Sort trial.
-        Highlights currently active elements during swaps. """
+        """ Animates a single randomized Quick Sort trial. Highlights currently active elements during swaps. """
         n = int(self.max_n.get())
         arr = np.random.randint(1, 100, n)
 
@@ -381,6 +499,13 @@ class SimulationGUI:
                 self.run_bfs_monte_carlo()
             else:
                 self.visualize_and_run_bfs()
+            return
+
+        if algorithm_name == "Karger Min-Cut":
+            if mode == "Monte Carlo":
+                self.run_karger_monte_carlo()
+            else:
+                self.visualize_karger()
             return
 
         # Otherwise: QuickSort

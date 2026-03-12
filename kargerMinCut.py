@@ -33,9 +33,14 @@ class KargerMinCut:
         G = G.copy()
 
         while len(G.nodes) > 2:
-            yield G.copy(), None
-
+            # Choose random edge
             u, v = random.choice(list(G.edges))
+
+            # Yield state BEFORE contraction
+            yield G.copy(), (u, v)
+
+            # Contract the edge
             G = nx.contracted_nodes(G, u, v, self_loops=False)
 
+        # Final state
         yield G.copy(), None

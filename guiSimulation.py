@@ -243,8 +243,7 @@ class SimulationGUI:
 
     # Monte Carlo mode
     def run_monte_carlo(self):
-        """ Performs Monte Carlo simulation of Randomized Quick Sort.
-        For each input size n:
+        """ Performs Monte Carlo simulation of Randomized Quick Sort. For each input size n:
             - Run k randomized trials
             - Compute mean comparison count
             - Plot empirical vs theoretical O(n log n) """
@@ -257,6 +256,7 @@ class SimulationGUI:
 
         empirical = []
         theoretical = []
+        variance = []
 
         for n in n_values:
 
@@ -271,12 +271,21 @@ class SimulationGUI:
                 metrics = algorithm.sort(arr)
                 results.append(metrics["comparisons"])
 
-            empirical.append(np.mean(results))
-            theoretical.append(n * math.log2(n))
+            mean_val = np.mean(results)
+            var_val = np.var(results, ddof=1)
 
-            # Realtime redraw (original behavior)
+            empirical.append(mean_val)
+            variance.append(var_val)
+            theoretical.append(n * math.log2(n))
+            std_dev = np.sqrt(variance)
+
+            # Realtime plot update
             self.ax.clear()
-            self.ax.plot(n_values[:len(empirical)], empirical, label="Empirical")
+
+            # Empirical mean with error bars (standard deviation)
+            self.ax.errorbar(n_values[:len(empirical)], empirical, yerr=std_dev, fmt='o-', capsize=4, label="Empirical Mean + Standard Deviation")
+
+            # Theoretical curve
             self.ax.plot(n_values[:len(theoretical)], theoretical, label="Theoretical n log n")
 
             self.ax.set_xlabel("Input Size (n)")
@@ -304,6 +313,7 @@ class SimulationGUI:
 
         empirical = []
         theoretical = []
+        variance = []
 
         for n in n_values:
 
@@ -318,13 +328,22 @@ class SimulationGUI:
                 metrics = bfs_sim.run_bfs(G)
                 results.append(metrics["edges_examined"])
 
-            empirical.append(np.mean(results))
-            theoretical.append(p * n * (n - 1) / 2)
+            mean_val = np.mean(results)
+            var_val = np.var(results, ddof=1)
 
-            # Realtime redraw (original behavior)
+            empirical.append(mean_val)
+            variance.append(var_val)
+            theoretical.append(p * n * (n - 1) / 2)
+            std_dev = np.sqrt(variance)
+
+            # Realtime plot update
             self.ax.clear()
-            self.ax.plot(n_values[:len(empirical)], empirical, label="Empirical")
-            self.ax.plot(n_values[:len(theoretical)], theoretical, label="Theoretical Expected Edges")
+
+            # Empirical mean with error bars (standard deviation)
+            self.ax.errorbar(n_values[:len(empirical)], empirical, yerr=std_dev, fmt='o-', capsize=4, label="Empirical Mean + Standard Deviation")
+
+            # Theoretical curve
+            self.ax.plot(n_values[:len(theoretical)], theoretical, label="Theoretical n log n")
 
             self.ax.set_xlabel("Number of Nodes (n)")
             self.ax.set_ylabel("Edges Examined")
@@ -344,6 +363,7 @@ class SimulationGUI:
 
         empirical = []
         theoretical = []
+        variance = []
 
         karger = KargerMinCut()
 
@@ -367,25 +387,21 @@ class SimulationGUI:
 
             success_probability = success_count / k
 
-            empirical.append(success_probability)
+            variance_val = success_probability * (1 - success_probability)
+            variance.append(variance_val)
 
-            # Theoretical bound: 2 / (n(n-1))
+            empirical.append(success_probability)
             theoretical.append(2 / (n * (n - 1)))
+            std_dev = np.sqrt(variance)
 
             # Realtime plot update
             self.ax.clear()
 
-            self.ax.plot(
-                n_values[:len(empirical)],
-                empirical,
-                label="Empirical Success Probability"
-            )
+            # Empirical mean with error bars (standard deviation)
+            self.ax.errorbar(n_values[:len(empirical)], empirical, yerr=std_dev, fmt='o-', capsize=4, label="Empirical Mean + Standard Deviation")
 
-            self.ax.plot(
-                n_values[:len(theoretical)],
-                theoretical,
-                label="Theoretical Lower Bound"
-            )
+            # Theoretical curve
+            self.ax.plot(n_values[:len(theoretical)], theoretical, label="Theoretical n log n")
 
             self.ax.set_xlabel("Number of Nodes (n)")
             self.ax.set_ylabel("Probability of Finding Min-Cut")

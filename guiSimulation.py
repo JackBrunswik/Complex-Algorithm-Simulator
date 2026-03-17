@@ -75,7 +75,7 @@ class SimulationGUI:
 
         ttk.Label(control_frame, text="Trials (k):").pack()
         self.k_trials = ttk.Entry(control_frame, validate="key", validatecommand=vcmd_pos)
-        self.k_trials.insert(0, "50")
+        self.k_trials.insert(0, "100")
         self.k_trials.pack()
 
         # BFS visualization legend
@@ -322,14 +322,17 @@ class SimulationGUI:
         For each input size n:
             - Generate k random connected graphs
             - Run BFS
-            - Record edges examined
-            - Plot empirical mean vs theoretical expected edges """
+            - Record max tree depth
+            - Plot empirical mean vs theoretical 2 * log(n) """
         min_n = int(self.min_n.get())
         max_n = int(self.max_n.get())
         step = int(self.step.get())
         k = int(self.k_trials.get())
 
-        p = 0.1
+        if min_n < 5:
+            print("Input Error: Minimum input value must be 5 or greater")
+            return
+
         n_values = list(range(min_n, max_n + 1, step))
 
         empirical = []
@@ -337,24 +340,23 @@ class SimulationGUI:
         variance = []
 
         for n in n_values:
-
             if self.stop_requested:
                 break
 
-            bfs_sim = RandomGraphBFS(p)
+            bfs_sim = RandomGraphBFS()
             results = []
 
             for _ in range(k):
-                G = bfs_sim.generate_connected_graph(n)
+                G = nx.connected_watts_strogatz_graph(n, k=4, p=0.1)
                 metrics = bfs_sim.run_bfs(G)
-                results.append(metrics["edges_examined"])
+                results.append(metrics["max_depth"])
 
             mean_val = np.mean(results)
             var_val = np.var(results, ddof=1)
 
             empirical.append(mean_val)
             variance.append(var_val)
-            theoretical.append(p * n * (n - 1) / 2)
+            theoretical.append(2 * math.log(n))
             std_dev = np.sqrt(variance[:len(empirical)])
 
             # Realtime plot update
@@ -364,10 +366,10 @@ class SimulationGUI:
             self.ax.errorbar(n_values[:len(empirical)], empirical, yerr=std_dev, fmt='o-', capsize=4, label="Empirical Mean + Standard Deviation")
 
             # Theoretical curve
-            self.ax.plot(n_values[:len(theoretical)], theoretical, label="Theoretical n log n")
+            self.ax.plot(n_values[:len(theoretical)], theoretical, label="Theoretical 2 log(n)")
 
             self.ax.set_xlabel("Number of Nodes (n)")
-            self.ax.set_ylabel("Edges Examined")
+            self.ax.set_ylabel("Tree Depth")
             self.ax.set_title("Monte Carlo Simulation: Random Graph BFS")
             self.ax.legend()
 

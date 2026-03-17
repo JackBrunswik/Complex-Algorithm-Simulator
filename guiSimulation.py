@@ -22,6 +22,8 @@ class SimulationGUI:
         self.create_controls()
         self.create_plot()
 
+        self.root.protocol("WM_DELETE_WINDOW", self.exit_program)
+
     # UI controls
     def create_controls(self):
         """ Creates the left-side control panel:
@@ -31,6 +33,9 @@ class SimulationGUI:
         - Run / Stop buttons """
         control_frame = ttk.Frame(self.root)
         control_frame.pack(side=tk.LEFT, padx=10, pady=10)
+
+        vcmd_pos = (self.root.register(self.validate_positive_int), "%P")
+        vcmd_karger = (self.root.register(self.validate_karger_n), "%P")
 
         # Mode selection
         ttk.Label(control_frame, text="Mode:").pack()
@@ -54,22 +59,22 @@ class SimulationGUI:
 
         # Monte Carlo parameters
         ttk.Label(control_frame, text="Min n:").pack()
-        self.min_n = ttk.Entry(control_frame)
+        self.min_n = ttk.Entry(control_frame, validate="key", validatecommand=vcmd_pos)
         self.min_n.insert(0, "10")
         self.min_n.pack()
 
         ttk.Label(control_frame, text="Max n:").pack()
-        self.max_n = ttk.Entry(control_frame)
+        self.max_n = ttk.Entry(control_frame, validate="key", validatecommand=vcmd_pos)
         self.max_n.insert(0, "500")
         self.max_n.pack()
 
         ttk.Label(control_frame, text="Step:").pack()
-        self.step = ttk.Entry(control_frame)
+        self.step = ttk.Entry(control_frame, validate="key", validatecommand=vcmd_pos)
         self.step.insert(0, "10")
         self.step.pack()
 
         ttk.Label(control_frame, text="Trials (k):").pack()
-        self.k_trials = ttk.Entry(control_frame)
+        self.k_trials = ttk.Entry(control_frame, validate="key", validatecommand=vcmd_pos)
         self.k_trials.insert(0, "50")
         self.k_trials.pack()
 
@@ -112,19 +117,35 @@ class SimulationGUI:
 
     # Stop sim
     def stop_simulation(self):
-        """ Sets stop flag to True. All loops check this flag to safely exit early. """
+        # Sets stop flag to True. All loops check this flag to safely exit early
         self.stop_requested = True
+
+    def exit_program(self):
+        # Closes the application window
+        self.root.destroy()
 
     # Plot setup
     def create_plot(self):
-        """ Creates matplotlib figure embedded inside Tkinter. """
+        # Creates matplotlib figure embedded inside Tkinter
         self.fig, self.ax = plt.subplots()
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.root)
         self.canvas.get_tk_widget().pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
+    def validate_positive_int(self, value):
+        # Allow only positive integers
+        if value == "":
+            return True
+        return value.isdigit() and int(value) > 0
+
+    def validate_karger_n(self, value):
+        # Karger requires n >= 2
+        if value == "":
+            return True
+        return value.isdigit() and int(value) >= 2
+
     # BFS visualization
     def visualize_and_run_bfs(self):
-        """ Generates a connected random graph and animates Breadth-First Search traversal using BFS layers. """
+        # Generates a connected random graph and animates Breadth-First Search traversal using BFS layers
 
         self.ax.set_title("Random Graph BFS Traversal")
         n = int(self.min_n.get())
@@ -277,7 +298,7 @@ class SimulationGUI:
             empirical.append(mean_val)
             variance.append(var_val)
             theoretical.append(n * math.log2(n))
-            std_dev = np.sqrt(variance)
+            std_dev = np.sqrt(variance[:len(empirical)])
 
             # Realtime plot update
             self.ax.clear()
@@ -334,7 +355,7 @@ class SimulationGUI:
             empirical.append(mean_val)
             variance.append(var_val)
             theoretical.append(p * n * (n - 1) / 2)
-            std_dev = np.sqrt(variance)
+            std_dev = np.sqrt(variance[:len(empirical)])
 
             # Realtime plot update
             self.ax.clear()
@@ -392,7 +413,7 @@ class SimulationGUI:
 
             empirical.append(success_probability)
             theoretical.append(2 / (n * (n - 1)))
-            std_dev = np.sqrt(variance)
+            std_dev = np.sqrt(variance[:len(empirical)])
 
             # Realtime plot update
             self.ax.clear()
@@ -472,7 +493,7 @@ class SimulationGUI:
 
     # Sort visualization mode
     def visualize_sort(self):
-        """ Animates a single randomized Quick Sort trial. Highlights currently active elements during swaps. """
+        # Animates a single randomized Quick Sort trial. Highlights currently active elements during swaps.
         n = int(self.max_n.get())
         arr = np.random.randint(1, 100, n)
 
@@ -510,6 +531,11 @@ class SimulationGUI:
         algorithm_name = self.algorithm_choice.get()
         mode = self.mode_choice.get()
 
+        if algorithm_name == "Karger Min-Cut":
+            if int(self.min_n.get()) < 2:
+                print("Karger Min-Cut requires n >= 2")
+                return
+
         if algorithm_name == "Random Graph BFS":
             if mode == "Monte Carlo":
                 self.run_bfs_monte_carlo()
@@ -533,4 +559,8 @@ class SimulationGUI:
 if __name__ == "__main__":
     root = tk.Tk()
     app = SimulationGUI(root)
-    root.mainloop()
+    # Hides unimportant error message when stopping the program in the IDE
+    try:
+        root.mainloop()
+    except KeyboardInterrupt:
+        pass

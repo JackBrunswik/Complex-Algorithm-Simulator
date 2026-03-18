@@ -301,7 +301,8 @@ class SimulationGUI:
             std_dev = np.sqrt(variance[:len(empirical)])
 
             # Realtime plot update
-            self.ax.clear()
+            self.fig.clf()
+            self.ax = self.fig.add_subplot(111)
 
             # Empirical mean with error bars (standard deviation)
             self.ax.errorbar(n_values[:len(empirical)], empirical, yerr=std_dev, fmt='o-', capsize=4, label="Empirical Mean + Standard Deviation")
@@ -360,7 +361,8 @@ class SimulationGUI:
             std_dev = np.sqrt(variance[:len(empirical)])
 
             # Realtime plot update
-            self.ax.clear()
+            self.fig.clf()
+            self.ax = self.fig.add_subplot(111)
 
             # Empirical mean with error bars (standard deviation)
             self.ax.errorbar(n_values[:len(empirical)], empirical, yerr=std_dev, fmt='o-', capsize=4, label="Empirical Mean + Standard Deviation")
@@ -418,7 +420,8 @@ class SimulationGUI:
             std_dev = np.sqrt(variance[:len(empirical)])
 
             # Realtime plot update
-            self.ax.clear()
+            self.fig.clf()
+            self.ax = self.fig.add_subplot(111)
 
             # Empirical mean with error bars (standard deviation)
             self.ax.errorbar(n_values[:len(empirical)], empirical, yerr=std_dev, fmt='o-', capsize=4, label="Empirical Mean + Standard Deviation")
@@ -574,7 +577,8 @@ class SimulationGUI:
             xlabel = "Success (1=correct, 0=incorrect)"
 
         # Plot
-        self.ax.clear()
+        self.fig.clf()
+        self.ax = self.fig.add_subplot(111)
         self.ax.hist(results, bins=20)
 
         self.ax.set_title(title)

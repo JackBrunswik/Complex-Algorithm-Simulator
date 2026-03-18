@@ -41,7 +41,7 @@ class SimulationGUI:
         ttk.Label(control_frame, text="Mode:").pack()
         self.mode_choice = ttk.Combobox(
             control_frame,
-            values=["Monte Carlo", "Visualization"],
+            values=["Monte Carlo", "Visualization", "Histogram"],
             state="readonly"
         )
         self.mode_choice.current(0)
@@ -263,7 +263,7 @@ class SimulationGUI:
             self.root.after(500)
 
     # Monte Carlo mode
-    def run_monte_carlo(self):
+    def run_quick_monte_carlo(self):
         """ Performs Monte Carlo simulation of Randomized Quick Sort. For each input size n:
             - Run k randomized trials
             - Compute mean comparison count
@@ -349,7 +349,7 @@ class SimulationGUI:
             for _ in range(k):
                 G = nx.connected_watts_strogatz_graph(n, k=4, p=0.1)
                 metrics = bfs_sim.run_bfs(G)
-                results.append(metrics["max_depth"])
+                results.append(metrics["tree_height"])
 
             mean_val = np.mean(results)
             var_val = np.var(results, ddof=1)
@@ -502,7 +502,7 @@ class SimulationGUI:
         self.ax.clear()
         bars = self.ax.bar(range(len(arr)), arr)
 
-        self.ax.set_title("Randomized Quick Sort — Single Trial")
+        self.ax.set_title("Randomized Quick Sort")
         self.ax.set_xlabel("Index")
         self.ax.set_ylabel("Value")
 
@@ -527,36 +527,107 @@ class SimulationGUI:
             self.root.update()
             self.root.after(50)  # Animation speed (ms)
 
+    # Runs a histogram simulation for the selected algorithm at a fixed n
+    def run_histogram(self):
+        n = int(self.max_n.get())  # use max_n as fixed input size
+        k = int(self.k_trials.get())
+
+        algorithm_name = self.algorithm_choice.get()
+
+        results = []
+
+        # Quick Sort Histogram
+        if algorithm_name == "Randomized Quick Sort":
+            algorithm = QuickSort()
+
+            for _ in range(k):
+                arr = np.random.uniform(0, 1, n)
+                metrics = algorithm.sort(arr)
+                results.append(metrics["comparisons"])
+
+            title = f"Quick Sort Comparisons Distribution (n = {n})"
+            xlabel = "Comparisons"
+
+        # BFS Histogram
+        elif algorithm_name == "Random Graph BFS":
+            bfs_sim = RandomGraphBFS()
+
+            for _ in range(k):
+                G = nx.connected_watts_strogatz_graph(n, k=4, p=0.1)
+                metrics = bfs_sim.run_bfs(G)
+                results.append(metrics["tree_height"])
+
+            title = f"BFS Tree Depth Distribution (n = {n})"
+            xlabel = "Tree Depth"
+
+        # Karger Histogram
+        elif algorithm_name == "Karger Min-Cut":
+            karger = KargerMinCut()
+            G = karger.generate_graph(n)
+            true_cut = len(nx.minimum_edge_cut(G))
+
+            for _ in range(k):
+                result = karger.run_karger(G)
+                results.append(1 if result["cut_size"] == true_cut else 0)
+
+            title = f"Karger Success Distribution (n = {n})"
+            xlabel = "Success (1=correct, 0=incorrect)"
+
+        # Plot
+        self.ax.clear()
+        self.ax.hist(results, bins=20)
+
+        self.ax.set_title(title)
+        self.ax.set_xlabel(xlabel)
+        self.ax.set_ylabel("Frequency")
+
+        self.canvas.draw()
+        self.root.update()
+
     def run_simulation(self):
         self.stop_requested = False
 
         algorithm_name = self.algorithm_choice.get()
         mode = self.mode_choice.get()
 
+        # Karger validation
         if algorithm_name == "Karger Min-Cut":
+            if mode == "Histogram":
+                if int(self.max_n.get()) >= 100:
+                    print("For Karger Min-Cut, please enter a max value lower than 100")
+                    return
             if int(self.min_n.get()) < 2:
-                print("Karger Min-Cut requires n >= 2")
+                print("Karger Min-Cut requires a minimum value of n >= 2")
                 return
 
+        # BFS routing
         if algorithm_name == "Random Graph BFS":
             if mode == "Monte Carlo":
                 self.run_bfs_monte_carlo()
+            elif mode == "Histogram":
+                self.run_histogram()
             else:
                 self.visualize_and_run_bfs()
             return
 
+        # Karger routing
         if algorithm_name == "Karger Min-Cut":
             if mode == "Monte Carlo":
                 self.run_karger_monte_carlo()
+            elif mode == "Histogram":
+                self.run_histogram()
             else:
                 self.visualize_karger()
             return
 
-        # Otherwise: QuickSort
-        if mode == "Monte Carlo":
-            self.run_monte_carlo()
-        else:
-            self.visualize_sort()
+        # Quick Sort routing
+        if algorithm_name == "Randomized Quick Sort":
+            if mode == "Monte Carlo":
+                self.run_quick_monte_carlo()
+            elif mode == "Histogram":
+                self.run_histogram()
+            else:
+                self.visualize_sort()
 
 if __name__ == "__main__":
     root = tk.Tk()

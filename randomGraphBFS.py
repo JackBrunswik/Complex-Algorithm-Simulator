@@ -35,9 +35,9 @@ class RandomGraphBFS:
                     queue.append(neighbor)
                     levels[neighbor] = levels[current] + 1
 
-        max_depth = max(levels.values())
+        tree_height = max(levels.values())
 
         return {
             "nodes_visited": len(visited),
-            "max_depth": max_depth
+            "tree_height": tree_height
         }

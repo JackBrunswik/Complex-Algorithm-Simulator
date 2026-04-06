@@ -1,15 +1,17 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 import numpy as np
 import math
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import networkx as nx
-from kargerMinCut import KargerMinCut
+from dataExport import export_csv
 
 # Import algorithms
 from quickSort import QuickSort
 from randomGraphBFS import RandomGraphBFS
+from kargerMinCut import KargerMinCut
 
 class SimulationGUI:
     def __init__(self, root):
@@ -318,6 +320,19 @@ class SimulationGUI:
             self.canvas.draw()
             self.root.update()
 
+        # Export data
+        rows = [
+            [n, empirical[i], variance[i]]
+            for i, n in enumerate(n_values[:len(empirical)])
+        ]
+
+        file = export_csv(
+            rows,
+            ["input_size", "mean_comparisons", "variance"],
+            "quick_sort_monte_carlo"
+        )
+        messagebox.showinfo("Export Successful", f"Saved to {file}")
+
     def run_bfs_monte_carlo(self):
         """ Monte Carlo simulation for Random Graph BFS.
         For each input size n:
@@ -377,6 +392,19 @@ class SimulationGUI:
 
             self.canvas.draw()
             self.root.update()
+
+        # Export data
+        rows = [
+            [n, empirical[i], variance[i]]
+            for i, n in enumerate(n_values[:len(empirical)])
+        ]
+
+        file = export_csv(
+            rows,
+            ["input_size", "mean_tree_depth", "variance"],
+            "bfs_monte_carlo"
+        )
+        messagebox.showinfo("Export Successful", f"Saved to {file}")
 
     def run_karger_monte_carlo(self):
         min_n = int(self.min_n.get())
@@ -438,6 +466,19 @@ class SimulationGUI:
 
             self.canvas.draw()
             self.root.update()
+
+        # Export data
+        rows = [
+            [n, empirical[i], variance[i]]
+            for i, n in enumerate(n_values[:len(empirical)])
+        ]
+
+        file = export_csv(
+            rows,
+            ["input_size", "success_probability", "variance"],
+            "karger_monte_carlo"
+        )
+        messagebox.showinfo("Export Successful", f"Saved to {file}")
 
     def visualize_karger(self):
         n = int(self.min_n.get())
@@ -587,6 +628,16 @@ class SimulationGUI:
 
         self.canvas.draw()
         self.root.update()
+
+        # Export data
+        rows = [[val] for val in results]
+
+        file = export_csv(
+            rows,
+            ["value"],
+            f"{algorithm_name.replace(' ', '_').lower()}_histogram"
+        )
+        messagebox.showinfo("Export Successful", f"Saved to {file}")
 
     def run_simulation(self):
         self.stop_requested = False

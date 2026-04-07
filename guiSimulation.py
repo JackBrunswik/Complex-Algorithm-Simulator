@@ -8,6 +8,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import networkx as nx
 from dataExport import export_csv
 
+import threading
+import queue
+
 # Import algorithms
 from quickSort import QuickSort
 from randomGraphBFS import RandomGraphBFS
@@ -20,6 +23,7 @@ class SimulationGUI:
 
         # Flag used to stop running simulations
         self.stop_requested = False
+        self.queue = queue.Queue()
 
         self.create_controls()
         self.create_plot()
@@ -302,23 +306,13 @@ class SimulationGUI:
             theoretical.append(n * math.log2(n))
             std_dev = np.sqrt(variance[:len(empirical)])
 
-            # Realtime plot update
-            self.fig.clf()
-            self.ax = self.fig.add_subplot(111)
-
-            # Empirical mean with error bars (standard deviation)
-            self.ax.errorbar(n_values[:len(empirical)], empirical, yerr=std_dev, fmt='o-', capsize=4, label="Empirical Mean + Standard Deviation")
-
-            # Theoretical curve
-            self.ax.plot(n_values[:len(theoretical)], theoretical, label="Theoretical n log n")
-
-            self.ax.set_xlabel("Input Size (n)")
-            self.ax.set_ylabel("Comparisons")
-            self.ax.set_title("Monte Carlo Simulation: Randomized Quick Sort")
-            self.ax.legend()
-
-            self.canvas.draw()
-            self.root.update()
+            self.queue.put((
+                "quick_monte_carlo",
+                n_values[:len(empirical)],
+                empirical.copy(),
+                theoretical.copy(),
+                std_dev.copy()
+            ))
 
         # Export data
         rows = [
@@ -375,23 +369,13 @@ class SimulationGUI:
             theoretical.append(2 * math.log(n))
             std_dev = np.sqrt(variance[:len(empirical)])
 
-            # Realtime plot update
-            self.fig.clf()
-            self.ax = self.fig.add_subplot(111)
-
-            # Empirical mean with error bars (standard deviation)
-            self.ax.errorbar(n_values[:len(empirical)], empirical, yerr=std_dev, fmt='o-', capsize=4, label="Empirical Mean + Standard Deviation")
-
-            # Theoretical curve
-            self.ax.plot(n_values[:len(theoretical)], theoretical, label="Theoretical 2 log(n)")
-
-            self.ax.set_xlabel("Number of Nodes (n)")
-            self.ax.set_ylabel("Tree Depth")
-            self.ax.set_title("Monte Carlo Simulation: Random Graph BFS")
-            self.ax.legend()
-
-            self.canvas.draw()
-            self.root.update()
+            self.queue.put((
+                "bfs_monte_carlo",
+                n_values[:len(empirical)],
+                empirical.copy(),
+                theoretical.copy(),
+                std_dev.copy()
+            ))
 
         # Export data
         rows = [
@@ -447,25 +431,13 @@ class SimulationGUI:
             theoretical.append(2 / (n * (n - 1)))
             std_dev = np.sqrt(variance[:len(empirical)])
 
-            # Realtime plot update
-            self.fig.clf()
-            self.ax = self.fig.add_subplot(111)
-
-            # Empirical mean with error bars (standard deviation)
-            self.ax.errorbar(n_values[:len(empirical)], empirical, yerr=std_dev, fmt='o-', capsize=4, label="Empirical Mean + Standard Deviation")
-
-            # Theoretical curve
-            self.ax.plot(n_values[:len(theoretical)], theoretical, label="Theoretical n log n")
-
-            self.ax.set_xlabel("Number of Nodes (n)")
-            self.ax.set_ylabel("Probability of Finding Min-Cut")
-
-            self.ax.set_title("Monte Carlo Simulation: Karger's Min-Cut")
-
-            self.ax.legend()
-
-            self.canvas.draw()
-            self.root.update()
+            self.queue.put((
+                "karger_monte_carlo",
+                n_values[:len(empirical)],
+                empirical.copy(),
+                theoretical.copy(),
+                std_dev.copy()
+            ))
 
         # Export data
         rows = [
@@ -617,17 +589,10 @@ class SimulationGUI:
             title = f"Karger Success Distribution (n = {n})"
             xlabel = "Success (1=correct, 0=incorrect)"
 
-        # Plot
-        self.fig.clf()
-        self.ax = self.fig.add_subplot(111)
-        self.ax.hist(results, bins=20)
-
-        self.ax.set_title(title)
         self.ax.set_xlabel(xlabel)
         self.ax.set_ylabel("Frequency")
 
-        self.canvas.draw()
-        self.root.update()
+        self.queue.put(("histogram", results, title, xlabel))
 
         # Export data
         rows = [[val] for val in results]
@@ -639,50 +604,144 @@ class SimulationGUI:
         )
         messagebox.showinfo("Export Successful", f"Saved to {file}")
 
-    def run_simulation(self):
-        self.stop_requested = False
+    def process_queue(self):
+        try:
+            while not self.queue.empty():
+                item = self.queue.get()
+                tag = item[0]
 
-        algorithm_name = self.algorithm_choice.get()
-        mode = self.mode_choice.get()
+                # Clear figure for fresh plot
+                self.fig.clf()
+                self.ax = self.fig.add_subplot(111)
 
-        # Karger validation
-        if algorithm_name == "Karger Min-Cut":
-            if mode == "Histogram":
-                if int(self.max_n.get()) >= 100:
-                    print("For Karger Min-Cut, please enter a max value lower than 100")
-                    return
-            if int(self.min_n.get()) < 2:
-                print("Karger Min-Cut requires a minimum value of n >= 2")
-                return
+                # Quick Sort Monte Carlo
+                if tag == "quick_monte_carlo":
+                    _, x, empirical, theoretical, std_dev = item
 
-        # BFS routing
+                    self.ax.errorbar(
+                        x, empirical,
+                        yerr=std_dev,
+                        fmt='o-',
+                        capsize=4,
+                        label="Empirical Mean + Std Dev"
+                    )
+                    self.ax.plot(x, theoretical, label="Theoretical n log n")
+
+                    self.ax.set_xlabel("Input Size (n)")
+                    self.ax.set_ylabel("Comparisons")
+                    self.ax.set_title("Monte Carlo Simulation: Randomized Quick Sort")
+                    self.ax.legend()
+
+                # BFS Monte Carlo
+                elif tag == "bfs_monte_carlo":
+                    _, x, empirical, theoretical, std_dev = item
+
+                    self.ax.errorbar(
+                        x, empirical,
+                        yerr=std_dev,
+                        fmt='o-',
+                        capsize=4,
+                        label="Empirical Mean + Std Dev"
+                    )
+                    self.ax.plot(x, theoretical, label="Theoretical 2 log(n)")
+
+                    self.ax.set_xlabel("Number of Nodes (n)")
+                    self.ax.set_ylabel("Tree Depth")
+                    self.ax.set_title("Monte Carlo Simulation: Random Graph BFS")
+                    self.ax.legend()
+
+                # Karger Monte Carlo
+                elif tag == "karger_monte_carlo":
+                    _, x, empirical, theoretical, std_dev = item
+
+                    self.ax.errorbar(
+                        x, empirical,
+                        yerr=std_dev,
+                        fmt='o-',
+                        capsize=4,
+                        label="Empirical Mean + Std Dev"
+                    )
+                    self.ax.plot(x, theoretical, label="Theoretical 2 / (n(n-1))")
+
+                    self.ax.set_xlabel("Number of Nodes (n)")
+                    self.ax.set_ylabel("Probability of Finding Min-Cut")
+                    self.ax.set_title("Monte Carlo Simulation: Karger's Min-Cut")
+                    self.ax.legend()
+
+                # Histogram
+                elif tag == "histogram":
+                    _, results, title, xlabel = item
+
+                    self.ax.hist(results, bins=20)
+
+                    self.ax.set_title(title)
+                    self.ax.set_xlabel(xlabel)
+                    self.ax.set_ylabel("Frequency")
+
+                # Visualization
+                elif tag == "visual_sort":
+                    self.visualize_sort()
+                    continue
+
+                elif tag == "visual_bfs":
+                    self.visualize_and_run_bfs()
+                    continue
+
+                elif tag == "visual_karger":
+                    self.visualize_karger()
+                    continue
+
+                # Draw updated plot
+                self.canvas.draw()
+
+        except Exception as e:
+            print("Queue error:", e)
+
+        # Keep polling queue
+        self.root.after(50, self.process_queue)
+
+    def _run_simulation_thread(self, algorithm_name, mode):
         if algorithm_name == "Random Graph BFS":
             if mode == "Monte Carlo":
                 self.run_bfs_monte_carlo()
             elif mode == "Histogram":
                 self.run_histogram()
             else:
-                self.visualize_and_run_bfs()
+                self.queue.put(("visual_bfs", None))
             return
 
-        # Karger routing
         if algorithm_name == "Karger Min-Cut":
             if mode == "Monte Carlo":
                 self.run_karger_monte_carlo()
             elif mode == "Histogram":
                 self.run_histogram()
             else:
-                self.visualize_karger()
+                self.queue.put(("visual_karger", None))
             return
 
-        # Quick Sort routing
         if algorithm_name == "Randomized Quick Sort":
             if mode == "Monte Carlo":
                 self.run_quick_monte_carlo()
             elif mode == "Histogram":
                 self.run_histogram()
             else:
-                self.visualize_sort()
+                self.queue.put(("visual_sort", None))
+
+    def run_simulation(self):
+        self.stop_requested = False
+
+        algorithm_name = self.algorithm_choice.get()
+        mode = self.mode_choice.get()
+
+        thread = threading.Thread(
+            target = self._run_simulation_thread,
+            args = (algorithm_name, mode),
+            daemon = True
+        )
+        thread.start()
+
+        # Start checking queue for updates
+        self.root.after(50, self.process_queue)
 
 if __name__ == "__main__":
     root = tk.Tk()

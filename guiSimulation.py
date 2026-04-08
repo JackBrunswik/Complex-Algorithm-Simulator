@@ -71,7 +71,7 @@ class SimulationGUI:
 
         ttk.Label(control_frame, text="Max n:").pack()
         self.max_n = ttk.Entry(control_frame, validate="key", validatecommand=vcmd_pos)
-        self.max_n.insert(0, "500")
+        self.max_n.insert(0, "100")
         self.max_n.pack()
 
         ttk.Label(control_frame, text="Step:").pack()
@@ -81,7 +81,7 @@ class SimulationGUI:
 
         ttk.Label(control_frame, text="Trials (k):").pack()
         self.k_trials = ttk.Entry(control_frame, validate="key", validatecommand=vcmd_pos)
-        self.k_trials.insert(0, "100")
+        self.k_trials.insert(0, "50")
         self.k_trials.pack()
 
         # BFS visualization legend
@@ -404,33 +404,44 @@ class SimulationGUI:
 
         karger = KargerMinCut()
 
+        graph_trials = 5  # Number of different graphs per n
+
         for n in n_values:
             if self.stop_requested:
                 break
 
-            # Generate one graph for this n
-            G = karger.generate_graph(n)
+            probabilities = []
 
-            # Compute true minimum cut once
-            true_cut = len(nx.minimum_edge_cut(G))
+            for _ in range(graph_trials):
+                # Generate one graph
+                G = karger.generate_graph(n)
 
-            success_count = 0
+                # Compute true min-cut once per graph
+                true_cut = len(nx.minimum_edge_cut(G))
 
-            for _ in range(k):
-                result = karger.run_karger(G)
+                success_count = 0
 
-                if result["cut_size"] == true_cut:
-                    success_count += 1
+                # Run Karger multiple times on same graph
+                for _ in range(k):
+                    result = karger.run_karger(G)
 
-            success_probability = success_count / k
+                    if result["cut_size"] == true_cut:
+                        success_count += 1
 
-            variance_val = success_probability * (1 - success_probability)
-            variance.append(variance_val)
+                prob = success_count / k
+                probabilities.append(prob)
 
-            empirical.append(success_probability)
+            # Average across graphs
+            mean_prob = np.mean(probabilities)
+            var_val = np.var(probabilities, ddof=1)
+
+            empirical.append(mean_prob)
+            variance.append(var_val)
             theoretical.append(2 / (n * (n - 1)))
+
             std_dev = np.sqrt(variance[:len(empirical)])
 
+            # Send to main thread for plotting
             self.queue.put((
                 "karger_monte_carlo",
                 n_values[:len(empirical)],

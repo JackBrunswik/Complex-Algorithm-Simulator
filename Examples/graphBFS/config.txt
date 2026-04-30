@@ -1,0 +1,6 @@
+Mode - Monte Carlo
+Algorithm - Random Graph BFS
+Min (n) - 5
+Max (n) - 500
+Step - 10
+Trials (k) - 100

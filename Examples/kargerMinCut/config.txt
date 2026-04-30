@@ -1,0 +1,6 @@
+Mode - Monte Carlo
+Algorithm - Karger Min-Cut
+Min (n) - 5
+Max (n) - 100
+Step - 10
+Trials (k) - 100

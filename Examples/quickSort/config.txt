@@ -1,0 +1,6 @@
+Mode - Monte Carlo
+Algorithm - Randomized Quick Sort
+Min (n) - 10
+Max (n) - 1000
+Step - 10
+Trials (k) - 50
